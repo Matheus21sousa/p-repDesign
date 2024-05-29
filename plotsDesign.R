@@ -8,6 +8,7 @@ library(readr)
 library(readxl)
 library(dplyr)
 library(viridis)
+library(here)
 
 ## library(installr)
 ## updateR()
@@ -21,6 +22,11 @@ library(viridis)
 #   2 rep (10:20 tub.)
 #   3 rep (>21 tub.)
 #   7 e 10 rep -> For checks 
+
+##-----------------
+## Definição de caminhos utilizando o pacote "here"
+dirRaw <- here("RawData")
+dirProcessed <- here("ProcessedData")
 
 ##-----------------
 ## ANHUMAS ALL GENOTYPES
@@ -43,23 +49,30 @@ prepDesign <- prDiGGer(numberOfTreatments=427,
 
 prepDesign <- getDesign(prepDesign)
 
-desPlot(prepDesign,seq(121),col="#D5E4CF",new=TRUE,label=TRUE)
-desPlot(prepDesign,seq(88)+121,col="#9dcc9b",new=FALSE,label=TRUE)
-desPlot(prepDesign,seq(213)+209,col="#2a836B",new=FALSE,label=TRUE)
+desPlot(prepDesign,seq(121),col="#C2E699",new=TRUE,label=TRUE)
+desPlot(prepDesign,seq(88)+121,col="#78C679",new=FALSE,label=TRUE)
+desPlot(prepDesign,seq(213)+209,col="#519259",new=FALSE,label=TRUE)
 desPlot(prepDesign,seq(5)+422,col="#ffffff",new=FALSE,label=TRUE,
         bdef=cbind(14,38),bcol="#1f2124",bwd=4)
 
 write.csv(prepDesign, file="matrix.csv")
 
+# Salva a matriz gerada usando a biblioteca Here
+pathRaw <- file.path(dirRaw, "matrix.csv") #Define o caminho para salvar e nome do arquivo (lib. "here")
+write_csv(prepDesign, pathRaw)
+
 ##-----------------
-## PLOTAGENS
+## MANIPULAÇÃO
 
 # Lê os arquivos Excel
-dbGeneral <- read_excel("raw.xlsx") ##Tabela com IDpainel / diggerID / cluster
-mx <- read_excel("matrix.xlsx", col_names = F) ##Abrir arquivo .csv gerado, excluir linhas e colunas e salvar como xlsx
+pathRaw <- file.path(dirRaw, "raw.xlsx")
+dbGeneral <- read_excel(pathRaw)
+
+pathRaw <- file.path(dirRaw, "matrix.xlsx")
+mx <- read_excel(pathRaw, col_names = F) ##Abrir arquivo .csv gerado pelo digger, excluir linhas e colunas e salvar como .xlsx
 
 # Selecionar apenas as colunas relevantes
-###dbFiltered <- dbGeneral %>% select(diggerID, `ID painel`, Cluster)
+# dbFiltered <- dbGeneral %>% select(diggerID, `ID painel`, Cluster)
 
 # Renomeia as colunas da matriz para números sequenciais
 colnames(mx) <- 1:ncol(mx)
@@ -83,28 +96,24 @@ newMx <- newMx %>%
 
 # Renomeia a coluna Value -> idAcesso e salva um arquivo .csv
 newMx <- newMx %>% rename("idAcesso" = "Value")
-write_csv(newMx, file = "newMatrix.csv")
+pathProcessed <- file.path(dirProcessed, "newMatrix.csv") #Define o caminho para salvar e nome do arquivo (lib. "here")
+write_csv(newMx, pathProcessed)
 
-# Combinando os dados de newMx com os dados gerais e salvando
-# raw <- read_excel("raw.xlsx")
-# dbGeneral <- dbGeneral %>% rename("IDpainel" = "ID painel")
-# newMx <- newMx %>% select(Linha, Coluna, Value)
-# 
-# sum(duplicated(newMx$Value))
-# sum(duplicated(raw$idAcesso))
-# 
-# combinedMx <- merge(newMx, dbGeneral, by.x = "Value", by.y = "IDpainel", all.y = F)
-# write.csv(combinedMx, file = "combinedMx.csv")
+##-----------------
+## PLOTAGEM
 
-# Clusteriza uma paleta de cores e armazena na var. cores
-cores <- viridis_pal()(nlevels(factor(newMx$Cluster)))
+# Cria uma paleta de cores com n° de levels equivalente ao n° de clusters
+corCluster <- viridis_pal()(nlevels(factor(newMx$Cluster)))
+
+# Cria uma variável para armazenar cores de acordo com o número de repetições
+corRep <- c("1" = "#C2E699", "2" = "#78C679", "3" = "#519259", "7" = "#18392B", "10" = "#18392B")
 
 # Plota a matriz clusterizada
 ggplot(newMx, aes(x = Coluna, y = Linha, fill = factor(Cluster), label = idAcesso)) +
   geom_tile(
-    lwd = 1) + ## espaço entre os plots
+    lwd = 1, width = 1, height = 1) + ## espaço entre os plots (lwd -> legenda, demais são do plot e vão de 0.0[max.] - 1[min.])
   geom_text(color = "white") +
-  scale_fill_manual(values = cores) +
+  scale_fill_manual(values = corCluster) +
   scale_x_continuous(breaks = unique(newMx$Coluna), labels = unique(newMx$Coluna),
                      expand = c(0, 0)) +
   scale_y_continuous(breaks = unique(newMx$Linha), labels = unique(newMx$Linha),
@@ -120,7 +129,7 @@ ggplot(newMx, aes(x = Coluna, y = Linha, fill = factor(Cluster), label = idAcess
 # Plota a matriz generalizada
 ggplot(newMx, aes(x = Coluna, y = Linha, fill = idAcesso, label = idAcesso)) +
   geom_tile(
-    width = 1, height = 1) + ## espaço entre os plots (0.0 maior espaço // 1 sem espaçamento)
+    lwd = 1, width = 1, height = 1) + ## espaço entre os plots (lwd -> legenda, demais são do plot e vão de 0.0[max.] - 1[min.])
   geom_text(color = "black") +
   scale_fill_gradient(low = "#E5F5E0", high = "mediumseagreen") +
   scale_x_continuous(breaks = unique(newMx$Coluna), labels = unique(newMx$Coluna),
@@ -130,9 +139,25 @@ ggplot(newMx, aes(x = Coluna, y = Linha, fill = idAcesso, label = idAcesso)) +
   labs(title = "Anhumas | Croqui do experimento",
        x = "Coluna",
        y = "Linha",
-       fill = "Agrupamento") +
+       fill = "ID Acesso") +
   theme_light() +
   theme(panel.grid = element_blank(), 
         plot.title = element_text(hjust = 0.5))
 
-# Casas cinzas são plots que devemos completar com "checks" para manter o delineamento retangular
+# Plota a matriz com as cores baseadas no n° de repetições
+ggplot(newMx, aes(x = Coluna, y = Linha, fill = factor(nRep), label = idAcesso)) +
+  geom_tile(
+    lwd = 1, width = 1, height = 1) + 
+  geom_text(color = "white") +
+  scale_fill_manual(values = corRep) +  
+  scale_x_continuous(breaks = unique(newMx$Coluna), labels = unique(newMx$Coluna),
+                     expand = c(0, 0)) + 
+  scale_y_continuous(breaks = unique(newMx$Linha), labels = unique(newMx$Linha),
+                     expand = c(0, 0)) + 
+  labs(title = "Anhumas | Croqui do experimento",
+       x = "Coluna",
+       y = "Linha",
+       fill = "N° Rep.") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5))  # Centraliza o título
