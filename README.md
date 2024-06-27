@@ -1,6 +1,8 @@
 # P-REP DESIGN USING DIGGER PACKAGE 
 
-> **Repository Owner:** *Matheus M. Sousa*
+> **Repository Owner:** *Matheus M. Sousa* </br>
+> **Laboratory:** *Laboratório de Melhoramento de Hortaliças - Esalq USP* </br>
+> **Guidance:** *Fernando Ângelo Piotto*
 >
 > O presente repositório visa documentar o uso da biblioteca DiGGer para o sorteio de delineamentos parcialmente repetidos, comumente chamados por p-rep.
 >
